@@ -1,39 +1,43 @@
 pipeline {
     agent any
+    tools { nodejs 'NodeJS 20' }
 
-    tools {
-        nodejs "NodeJS" // Make sure this matches your Jenkins NodeJS tool name
+    parameters {
+        booleanParam(name: 'SKIP_TEST', defaultValue: false, description: 'Skip test stage if true')
     }
 
     stages {
-        stage('Checkout') {
+        stage('Build') {
             steps {
-                git branch: 'main', url: 'https://github.com/Shivam-patil1/jenkins-basic.git'
-            }
-        }
-
-        stage('Install Dependencies') {
-            steps {
+                echo "📦 Installing dependencies..."
                 sh 'npm install'
             }
         }
 
-        stage('Run Tests') {
+        stage('Test') {
+            when { expression { return !params.SKIP_TEST } }
             steps {
+                echo "🧪 Running tests..."
                 sh 'npm test'
+            }
+        }
+
+        stage('Deploy') {
+            when {
+                allOf {
+                    branch 'main'
+                    expression { currentBuild.currentResult == 'SUCCESS' }
+                }
+            }
+            steps {
+                echo "🚀 Deploying since this is 'main' and build was successful."
+                // Place your actual deployment command here
             }
         }
     }
 
     post {
-        always {
-            echo 'Pipeline finished!'
-        }
-        success {
-            echo 'Tests passed ✅'
-        }
-        failure {
-            echo 'Tests failed ❌'
-        }
+        success { echo "✅ Pipeline completed successfully!" }
+        failure { echo "❌ Pipeline failed." }
     }
 }
